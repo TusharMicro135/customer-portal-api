@@ -1,0 +1,79 @@
+name: Reusable build and test
+
+on:
+  workflow_call:
+    inputs:
+      task:
+        description: Whitelisted Turborepo task to run
+        required: true
+        type: string
+      artifact-name:
+        required: false
+        type: string
+        default: build-output
+    secrets:
+      TURBO_TOKEN:
+        required: false
+      TURBO_TEAM:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  run-task:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: true
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Resolve pnpm store path
+        id: pnpm-store
+        shell: bash
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/package.json', 'pnpm-workspace.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+      - name: Cache Turborepo outputs
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+      - name: Install workspace
+        run: pnpm install --no-frozen-lockfile
+      - name: Validate task input
+        shell: bash
+        run: |
+          case "${{ inputs.task }}" in
+            lint|typecheck|test:unit|test:integration|build) ;;
+            *) echo "Unsupported task: ${{ inputs.task }}" >&2; exit 64 ;;
+          esac
+      - name: Run ${{ inputs.task }}
+        run: pnpm turbo run "${{ inputs.task }}" --cache-dir=.turbo
+      - name: Publish verified build
+        if: inputs.task == 'build'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: |
+            apps/*/.next
+            services/*/dist
+            packages/*/dist
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
