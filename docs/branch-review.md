@@ -1,14 +1,19 @@
 # Branch review
 
-Review date: 2 July 2026
+Review date: 2 July 2026 (Asia/Kolkata)
 
-| Branch | Classification | Rationale / policy |
+| Branch | Delta against `main` at review | Classification and next step |
 |---|---|---|
-| `main` | Default | Production-ready release line. Protected and updated only through PRs. |
-| `develop` | Active | Integration branch for the next release; ongoing features should target this line. |
-| `feature/customer-search` | Active | Planned customer-facing search development off `develop`. |
-| `feature/billing-api` | Active | Planned billing service/API development off `develop`. |
-| `hotfix/auth-token-fix` | Stale | Created to represent a completed/abandoned emergency fix with no unique follow-up commit. With no activity or delta from the current release line, retaining it suggests live work where none exists; archive/delete after confirming any external references. |
-| `devops-modernization-2026-07-02` | Active review | CI/security modernization and assessment documentation; merge by PR only. |
+| `main` | Default branch | Release line and PR target. |
+| `develop` | 0 unique commits; 3 behind | Inactive placeholder. Rebase it before accepting new work, or delete it if the team does not intend to use a release-integration branch. |
+| `feature/customer-search` | 0 unique commits; 3 behind | Stale placeholder. No customer-search code is present; delete or recreate from the current integration branch when the work starts. |
+| `feature/billing-api` | 0 unique commits; 3 behind | Stale placeholder. No billing delta is present; delete or recreate from the current integration branch when the work starts. |
+| `hotfix/auth-token-fix` | 0 unique commits; 3 behind | Stale. Delete after checking for external incident links. |
+| `devops-modernization-2026-07-02` | Active modernization delta | The only human-authored non-default branch with substantive code/workflow changes. Review through PR #5. |
+| `dependabot/npm_and_yarn/production-dependencies-7b50e36493` | 1 ahead | Active automated dependency update. Review after the modernization PR because it overlaps package manifests. |
+| `dependabot/npm_and_yarn/development-dependencies-4e21ff397b` | 1 ahead | Active automated dependency update. Review after the modernization PR because it overlaps package manifests. |
+| `dependabot/github_actions/actions/checkout-7` | 1 ahead, 2 behind | Active but needs a rebase; Checkout 7 is already used in the modernization workflows. |
+| `dependabot/github_actions/actions/setup-node-6` | 1 ahead, 1 behind | Active but needs a rebase; Setup Node 6 is already used in the modernization workflows. |
+| `dependabot/github_actions/pnpm/action-setup-6` | 1 ahead, 1 behind | Active but needs a rebase; pnpm/action-setup 6 is already used in the modernization workflows. |
 
-The three feature/integration branches are marked active because they name currently planned delivery work and share the initialized project baseline. The hotfix branch is explicitly marked stale because it has no unique changes or continuing incident context; after its GitHub discussion and incident references are checked, it should be deleted to reduce branch noise.
+Only the modernization and current Dependabot branches contain commits that are not on `main`. The named feature, hotfix and development branches should not be described as active delivery work until they contain a unique, current change.
