@@ -14,11 +14,10 @@ On the requested five-control security score, `main` is 4/10 today: Dependabot a
 
 ## Expected impact
 
-- Based on the observed setup/lint timings and the build/browser stages that currently never run, the baseline full path is roughly 3–4 minutes on this small repository. A warm modernized run should land around 1.5–2.5 minutes because independent checks fan out, pnpm/Turbo/Playwright caches are available, and Playwright consumes the build artifact instead of rebuilding.
-- Security checks become normal PR feedback: CodeQL (~55 seconds in the observed run), Gitleaks (~6 seconds), and dependency/license review (~4 seconds) run alongside CI instead of extending the build critical path.
-- CI failures will carry reusable coverage output and a Playwright report instead of requiring a full local reproduction to see what failed.
-
-The estimates are deliberately conservative and should be replaced with the median and p95 from ten green PR runs once the current test/build issues are resolved.
+- Measured baseline: 2m21s for a full green validate + e2e run. Measured modern workflow: 3m02s wall-clock on the first full run (about 2m25s of actual critical-path job time, plus runner scheduling). The modern run carries substantially more coverage/security feedback, but it is not faster yet.
+- Expected steady state: about 2m30s after a pnpm lockfile enables deterministic lockfile-keyed caching and the two legacy workflows are removed. Keep that as a target until ten comparable runs provide a median and p95.
+- Security checks now run as normal PR feedback: CodeQL, Gitleaks, dependency/license review and the production audit all passed on the final branch head.
+- Coverage and failing Playwright evidence are retained as artifacts instead of requiring a full local reproduction.
 
 ## Files and checks
 
@@ -43,4 +42,4 @@ Recommended rules for `main` and `develop`:
 
 ## Validation status
 
-The live Actions history confirms the security jobs run successfully. The CI jobs currently fail before their intended assertions because of the NodeNext import issue fixed here. Since this desktop runtime has no local Git/Node/pnpm toolchain, the next Actions run is the authoritative validation step for the corrected CI path.
+The final branch run is conclusive: lint, type-check, unit tests, integration tests, build artifact publication, Playwright against that artifact, CodeQL, Gitleaks, dependency/license review and the production dependency audit all passed. The sole failure is the 80% coverage job, which reports 0% branches for an untested package and is the intended signal behind the Test Coverage Improvements ticket.
