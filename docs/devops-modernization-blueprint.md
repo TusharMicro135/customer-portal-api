@@ -6,7 +6,7 @@ Review date: 2 July 2026 (Asia/Kolkata) · Implementation branch: `devops-modern
 
 `customer-portal-api` is a young TypeScript/pnpm/Turborepo monorepo with two Next.js apps, an Express API, a BullMQ worker, two shared packages, and starter Docker/Terraform infrastructure. The intended design is service-oriented, but it is not yet an integrated customer platform: the API serves an in-memory repository, the two frontends render local sample data, and the worker is not fed by an API-side queue producer.
 
-The default-branch pipeline is similarly early. It installs dependencies three times across two workflows, runs lint twice, serializes most validation, rebuilds before Playwright, has no dependency or task cache, and publishes no build or coverage artifacts. The last observed PR run reached a real NodeNext type-check failure after about 21 seconds; because later steps were skipped, there is no successful end-to-end duration yet. Based on those observed setup timings and the remaining build/browser work, a complete cold run is likely to take about 3–4 minutes. The modernized design should land around 1.5–2.5 minutes on a warm cache for this small repository, with security scanning running in parallel.
+The default-branch pipeline is similarly early. It installs dependencies three times across two workflows, runs lint twice, serializes most validation, rebuilds before Playwright, has no dependency or task cache, and publishes no build or coverage artifacts. The first reviewed PR run reached a real NodeNext type-check failure after about 21 seconds. After repairing the repository configuration, the existing baseline completed in 2m21s and the broader modern workflow completed in 3m02s, with lint, type-check, unit, integration, build, Playwright and security jobs green and only the explicit 80% coverage floor red. The modern pipeline adds much stronger feedback, but the first measured run is not a wall-clock improvement. The realistic steady target after a committed lockfile, stable cache reuse and removal of the legacy workflows is about 2m30s.
 
 The proposed workflows make lint, type-check, unit, integration, coverage, and security jobs visible and parallel; cache pnpm and Turborepo state; hand the built Next.js and service output to Playwright; set a hard 80% coverage floor; and add CodeQL, dependency/license review, a production dependency audit, and Gitleaks. An import-extension bug that was blocking every test/build path has also been fixed on the modernization branch.
 
@@ -161,10 +161,10 @@ The modernization branch adds all five workflow-level protections. Repository-le
 
 Runtime estimates:
 
-- Current observed failing critical path: ~21 seconds to the type-check failure.
-- Current estimated complete cold PR pipeline: ~3–4 minutes. This is based on measured ~9-second installs and ~4-second lint plus an allowance for the currently skipped TypeScript/Jest/Next/Playwright stages. It should not be reported as measured until the baseline completes.
-- Optimized warm-cache estimate: ~1.5–2.5 minutes; CodeQL's observed ~55-second job fits under the parallel CI critical path. A cold first run will be closer to the current estimate.
-- Validation method: after the workflow is green, record the median and p95 of at least ten representative PR runs and replace both estimates.
+- Existing baseline, measured full PR run: 2m21s (64s validate plus 72s e2e, sequential).
+- Modernized first full run: 3m02s wall-clock; the actual dependency chain was about 2m25s before runner-scheduling gaps. Lint, type-check, unit, integration, build, artifact reuse and Playwright passed; the 80% coverage gate failed as expected on packages with missing tests.
+- Realistic steady-state target: about 2m30s after committing a pnpm lockfile, switching to frozen lockfile-native caching and removing the two legacy workflows. The first full run shows that parallelization and artifact reuse offset the extra coverage/security scope but do not yet make the broader pipeline faster than the stripped-down baseline.
+- Validation method: record the median and p95 of at least ten comparable PR runs and update this target.
 
 ## Recommended GitHub Actions Setup
 
@@ -196,7 +196,7 @@ For `main` and `develop`:
 
 ## Risks
 
-- The 80% target is intentionally a target, not a measured baseline. Making it required before missing suites are added will block delivery.
+- The 80% target is intentionally a target, not a measured baseline. The final run proves the gate is active and currently blocks on missing coverage; making it required before missing suites are added will block delivery.
 - A manifest-only cache key is a temporary accommodation for the missing pnpm lockfile and can return a broader cache than a lockfile key.
 - The current integration tests do not exercise the deployed architecture implied by Docker Compose; they can stay green while PostgreSQL/Redis wiring is broken or absent.
 - Pull requests that only add workflow files can make CodeQL/Gitleaks look “present” before branch protection and default-branch push protection are actually enforced.
@@ -216,5 +216,5 @@ For `main` and `develop`:
 - [ ] Enable GitHub secret scanning/push protection and the recommended branch rulesets.
 - [ ] Remove `ci.yml` and `lint.yml` once the replacement is green and required.
 - [ ] Pin third-party action revisions after verifying Dependabot's major-version branches.
-- [ ] Record ten clean workflow runs and replace estimates with measured median/p95 values.
+- [ ] Record ten comparable workflow runs and publish median/p95 values; the first complete runs were 2m21s baseline and 3m02s modernized.
 - [ ] Keep the Jira epic, Health Tracker row, Google Doc, and Slack handoff linked from the PR.
