@@ -8,7 +8,7 @@ The coverage job sets an 80% floor for branches, functions, lines, and statement
 
 This is a small TypeScript monorepo, not a set of independently managed repositories. It has two Next.js apps, an Express API, a BullMQ worker, shared contracts/utilities, and PostgreSQL/Redis development infrastructure. The service boundaries are useful, but several runtime links are still placeholders: the API uses an in-memory repository even though `pg` and PostgreSQL are present, the frontends render local sample data instead of calling the API, and the worker consumes Redis jobs without a queue producer in the API.
 
-The two existing workflows install dependencies three times, lint twice, serialize validation, and rebuild before e2e. They do not share a pnpm/Turbo cache, reuse artifacts, gate coverage, or run security checks. There is also no committed pnpm lockfile. The last PR run reached a concrete NodeNext failure after about 21 seconds—the shared-utils validation test imported `./validation` without the required `.js` extension—so tests and builds were skipped. This branch fixes that import.
+The two existing workflows install dependencies three times, lint twice, serialize validation, and rebuild before e2e. They do not share a pnpm/Turbo cache, reuse artifacts, gate coverage, or run security checks. There is also no committed pnpm lockfile. The first reviewed run reached a concrete NodeNext/Jest configuration conflict after about 21 seconds. The branch now gives shared libraries package-level build outputs, keeps test files out of production declaration builds, and maps the monorepo’s ESM imports correctly in Jest; the final lint, type, unit, integration, build and e2e jobs pass.
 
 On the requested five-control security score, `main` is 4/10 today: Dependabot and an ESLint check are present; secret detection, static analysis, and PR license review are not.
 
@@ -25,7 +25,7 @@ On the requested five-control security score, `main` is 4/10 today: Dependabot a
 - `.github/workflows/ci-modernized.yml`: parallel lint/type/unit/integration/coverage jobs, an 80% floor, artifact reuse, browser caching, and stale-run cancellation.
 - `.github/workflows/security.yml`: CodeQL, dependency/license review, production dependency audit, and Gitleaks.
 - `playwright.config.ts` and `apps/customer-web/package.json`: run `next start` from the downloaded production artifact in CI.
-- `packages/shared-utils/src/validation.test.ts`: fix the NodeNext import that currently blocks type-check and all test/build-dependent jobs.
+- Package/service TypeScript and Jest configs plus small API/worker typing fixes: make the workspace buildable and testable under the repo’s NodeNext/ts-jest combination.
 - `docs/devops-modernization-blueprint.md`: branch, architecture, test, security, and migration findings with evidence-backed estimates.
 
 A limitation worth addressing right away: this repo has no `pnpm-lock.yaml`, so the workflow temporarily keys pnpm cache entries from package manifests and uses `--no-frozen-lockfile`. The next dependency-management ticket should commit a pnpm 9.15.4 lockfile and flip every install to `--frozen-lockfile`.
