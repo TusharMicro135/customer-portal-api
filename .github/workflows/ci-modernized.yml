@@ -84,7 +84,7 @@ jobs:
           retention-days: 14
 
   build:
-    needs: [quality, unit-tests, integration-tests, coverage]
+    needs: [quality, unit-tests, integration-tests]
     uses: ./.github/workflows/reusable-build.yml
     with:
       task: build
