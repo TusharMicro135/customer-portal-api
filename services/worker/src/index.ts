@@ -1,12 +1,18 @@
 import { Worker } from 'bullmq';
-import { Redis } from 'ioredis';
 import type { CustomerWelcomeJob } from '@portal/shared-types';
 import { logger } from '@portal/shared-utils';
 import { processWelcome } from './processor.js';
 
-const connection = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', { maxRetriesPerRequest: null });
+const redisUrl = new URL(process.env.REDIS_URL ?? 'redis://localhost:6379');
+const connection = {
+  host: redisUrl.hostname,
+  port: Number(redisUrl.port || 6379),
+  username: redisUrl.username || undefined,
+  password: redisUrl.password || undefined
+};
+
 const worker = new Worker<CustomerWelcomeJob>('customer-events', job => processWelcome(job.data), { connection });
 
 worker.on('completed', job => logger.info('Job completed', { jobId: job.id ?? 'unknown' }));
 worker.on('failed', (job, error) => logger.error('Job failed', { jobId: job?.id ?? 'unknown', error: error.message }));
-process.on('SIGTERM', async () => { await worker.close(); await connection.quit(); });
+process.on('SIGTERM', async () => { await worker.close(); });
