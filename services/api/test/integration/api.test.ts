@@ -1,0 +1,3 @@
+import request from 'supertest';
+import { createApp } from '../../src/app';
+describe('API', () => { const app=createApp(); it('reports healthy', async()=>{const r=await request(app).get('/health'); expect(r.status).toBe(200); expect(r.body).toMatchObject({status:'ok',service:'customer-portal-api'});}); it('gets a customer',async()=>{const r=await request(app).get('/customers/d9428888-122b-11e1-b85c-61cd3cbb3210'); expect(r.status).toBe(200); expect(r.body.email).toBe('ada@example.com');}); it('rejects invalid ids',async()=>expect((await request(app).get('/customers/not-a-uuid')).status).toBe(400)); });

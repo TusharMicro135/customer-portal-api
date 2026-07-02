@@ -1,0 +1,1 @@
+module.exports={displayName:'worker',testEnvironment:'node',preset:'ts-jest',testMatch:['<rootDir>/test/**/*.test.ts'],transform:{'^.+\\.tsx?$':['ts-jest',{tsconfig:{module:'CommonJS'}}]},coverageThreshold:{global:{branches:48,functions:48,lines:48,statements:48}}};

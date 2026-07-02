@@ -1,0 +1,2 @@
+import { MemoryCustomerRepository } from '../../src/repository';
+describe('customer repository', () => { const repo = new MemoryCustomerRepository(); it('finds seeded customer', async () => expect((await repo.findById('d9428888-122b-11e1-b85c-61cd3cbb3210'))?.displayName).toBe('Ada Lovelace')); it('returns null for a missing id', async () => expect(await repo.findById('11111111-1111-1111-1111-111111111111')).toBeNull()); });
