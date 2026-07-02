@@ -2,5 +2,5 @@
   "name": "@portal/shared-types", "version": "0.1.0", "private": true, "type": "module",
   "main": "dist/index.js", "types": "dist/index.d.ts",
   "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit", "lint": "eslint src --max-warnings=0", "test": "jest --passWithNoTests", "test:unit": "jest --passWithNoTests", "test:integration": "jest --passWithNoTests", "test:coverage": "jest --coverage --passWithNoTests" },
-  "devDependencies": { "typescript": "workspace:^" }
+  "devDependencies": { "typescript": "^5.8.3" }
 }
