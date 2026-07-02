@@ -1,10 +1,10 @@
 import cors from 'cors';
-import express, { type NextFunction, type Request, type Response } from 'express';
+import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import type { HealthStatus } from '@portal/shared-types';
 import { customerIdSchema, paginationSchema, validate } from '@portal/shared-utils';
 import { MemoryCustomerRepository, type CustomerRepository } from './repository.js';
 
-export function createApp(repository: CustomerRepository = new MemoryCustomerRepository()) {
+export function createApp(repository: CustomerRepository = new MemoryCustomerRepository()): Express {
   const app = express();
   app.disable('x-powered-by');
   app.use(cors());
