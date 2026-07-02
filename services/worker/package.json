@@ -2,5 +2,5 @@
   "name": "@portal/worker", "version": "0.1.0", "private": true, "type": "module", "main": "dist/index.js",
   "scripts": { "dev": "tsx watch src/index.ts", "build": "tsc -p tsconfig.json", "start": "node dist/index.js", "lint": "eslint src test --max-warnings=0", "typecheck": "tsc --noEmit", "test": "jest", "test:unit": "jest", "test:integration": "jest --passWithNoTests", "test:coverage": "jest --coverage" },
   "dependencies": { "@portal/shared-types": "workspace:*", "@portal/shared-utils": "workspace:*", "bullmq": "^5.56.3", "ioredis": "^5.6.1" },
-  "devDependencies": { "@types/jest": "^29.5.14", "jest": "^29.7.0", "ts-jest": "^29.2.5", "tsx": "^4.20.3", "typescript": "^5.8.3" }
+  "devDependencies": { "@types/jest": "^30.0.0", "jest": "^30.4.2", "ts-jest": "^29.2.5", "tsx": "^4.20.3", "typescript": "^6.0.3" }
 }

@@ -2,5 +2,5 @@
   "name": "@portal/customer-web", "version": "0.1.0", "private": true,
   "scripts": { "dev": "next dev -p 3000", "build": "next build", "lint": "next lint", "typecheck": "tsc --noEmit", "test": "jest --passWithNoTests", "test:unit": "jest --passWithNoTests", "test:integration": "jest --passWithNoTests", "test:coverage": "jest --coverage --passWithNoTests" },
   "dependencies": { "next": "^15.3.4", "react": "^19.1.0", "react-dom": "^19.1.0", "@portal/shared-types": "workspace:*" },
-  "devDependencies": { "@types/react": "^19.1.8", "@types/react-dom": "^19.1.6", "typescript": "^5.8.3" }
+  "devDependencies": { "@types/react": "^19.1.8", "@types/react-dom": "^19.1.6", "typescript": "^6.0.3" }
 }
