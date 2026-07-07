@@ -1,4 +1,4 @@
-import { customerIdSchema, paginationSchema, validate } from './validation';
+import { customerIdSchema, paginationSchema, validate } from './validation.js';
 
 describe('validation', () => {
   it('accepts a UUID customer id', () => expect(validate(customerIdSchema, 'd9428888-122b-11e1-b85c-61cd3cbb3210')).toBeTruthy());
