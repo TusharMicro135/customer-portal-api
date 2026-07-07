@@ -1,0 +1,153 @@
+name: Modernized CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: ${{ matrix.task }}
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [lint, typecheck]
+    uses: ./.github/workflows/reusable-build.yml
+    with:
+      task: ${{ matrix.task }}
+    secrets: inherit
+
+  unit-tests:
+    uses: ./.github/workflows/reusable-build.yml
+    with:
+      task: test:unit
+    secrets: inherit
+
+  integration-tests:
+    uses: ./.github/workflows/reusable-build.yml
+    with:
+      task: test:integration
+    secrets: inherit
+
+  coverage:
+    name: coverage (80% floor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: true
+      COVERAGE_FLOOR: 80
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Resolve pnpm store path
+        id: pnpm-store
+        shell: bash
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/package.json', 'pnpm-workspace.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+      - name: Cache Turborepo outputs
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+      - run: pnpm install --no-frozen-lockfile
+      - name: Test and enforce coverage floor
+        run: pnpm test:coverage -- --coverageThreshold="{\"global\":{\"branches\":$COVERAGE_FLOOR,\"functions\":$COVERAGE_FLOOR,\"lines\":$COVERAGE_FLOOR,\"statements\":$COVERAGE_FLOOR}}"
+      - name: Publish coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: "**/coverage/**"
+          if-no-files-found: warn
+          retention-days: 14
+
+  build:
+    needs: [quality, unit-tests, integration-tests, coverage]
+    uses: ./.github/workflows/reusable-build.yml
+    with:
+      task: build
+      artifact-name: verified-build
+    secrets: inherit
+
+  e2e:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Resolve pnpm store path
+        id: pnpm-store
+        shell: bash
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/package.json', 'pnpm-workspace.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+      - name: Cache Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package.json') }}
+      - run: pnpm install --no-frozen-lockfile
+      - name: Download the verified build
+        uses: actions/download-artifact@v4
+        with:
+          name: verified-build
+          path: .
+      - name: Install Chromium system dependencies
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Start the verified customer build
+        shell: bash
+        run: |
+          pnpm --filter @portal/customer-web exec next start -p 3000 > /tmp/customer-web.log 2>&1 &
+          for attempt in {1..30}; do
+            curl --fail --silent http://127.0.0.1:3000 >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/customer-web.log
+          exit 1
+      - name: Run Playwright against the verified build
+        run: pnpm test:e2e
+      - name: Publish Playwright failures
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 7
