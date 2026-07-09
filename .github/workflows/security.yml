@@ -17,41 +17,33 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  codeql:
-    name: CodeQL (JavaScript/TypeScript)
+  code-security:
+    name: CodeQL and secret scan
     permissions:
       contents: read
       security-events: write
       packages: read
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: github/codeql-action/init@v3
         with:
           languages: javascript-typescript
           queries: security-and-quality
       - uses: github/codeql-action/analyze@v3
+      - name: Scan full history for secrets
+        if: always()
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  dependency-review:
-    name: Dependency and license review
-    if: github.event_name == 'pull_request'
-    permissions:
-      contents: read
+  supply-chain:
+    name: Dependency, vulnerability, and license review
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: high
-          license-check: true
-          deny-licenses: AGPL-3.0, GPL-3.0, SSPL-1.0
-
-  dependency-audit:
-    name: Production dependency audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -63,15 +55,10 @@ jobs:
           package-manager-cache: false
       - name: Audit production dependencies at high severity
         run: pnpm audit --prod --audit-level high
-
-  secret-scan:
-    name: Gitleaks
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
+      - name: Review dependency and license changes
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
         with:
-          fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          fail-on-severity: high
+          license-check: true
+          deny-licenses: AGPL-3.0, GPL-3.0, SSPL-1.0
