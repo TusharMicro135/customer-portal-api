@@ -1,4 +1,4 @@
-name: Reusable build and test
+name: Reusable workspace task
 
 on:
   workflow_call:
@@ -8,9 +8,10 @@ on:
         required: true
         type: string
       artifact-name:
+        description: Build artifact name
         required: false
         type: string
-        default: build-output
+        default: verified-build
     secrets:
       TURBO_TOKEN:
         required: false
@@ -36,26 +37,17 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22
-      - name: Resolve pnpm store path
-        id: pnpm-store
-        shell: bash
-        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-store.outputs.path }}
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/package.json', 'pnpm-workspace.yaml') }}
-          restore-keys: |
-            pnpm-${{ runner.os }}-
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - name: Cache Turborepo outputs
         uses: actions/cache@v4
         with:
           path: .turbo
-          key: turbo-${{ runner.os }}-${{ github.sha }}
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}-${{ inputs.task }}
           restore-keys: |
-            turbo-${{ runner.os }}-
-      - name: Install workspace
-        run: pnpm install --no-frozen-lockfile
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
       - name: Validate task input
         shell: bash
         run: |
