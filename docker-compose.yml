@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: customer_portal
+      POSTGRES_USER: portal
+      POSTGRES_PASSWORD: dummy-local-password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/migrations:/docker-entrypoint-initdb.d:ro
+
+  backend:
+    image: node:20
+    working_dir: /workspace
+    command: sh -c "npm install && npm run build --workspace backend && npm start --workspace backend"
+    volumes:
+      - .:/workspace
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: customer_portal
+      PGUSER: portal
+      PGPASSWORD: dummy-local-password
+      PAYMENT_QUEUE: payment-reconciliation
+      PORT: "4000"
+    depends_on:
+      - postgres
+    ports:
+      - "4000:4000"
+
+  frontend:
+    image: node:20
+    working_dir: /workspace
+    command: sh -c "npm install && npm run dev --workspace frontend -- --host 0.0.0.0"
+    volumes:
+      - .:/workspace
+    environment:
+      VITE_API_BASE_URL: http://localhost:4000
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+
+  worker:
+    image: python:3.11
+    working_dir: /workspace/worker
+    command: sh -c "pip install -r requirements.txt && python worker.py"
+    volumes:
+      - .:/workspace
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: customer_portal
+      PGUSER: portal
+      PGPASSWORD: dummy-local-password
+      PAYMENT_QUEUE: payment-reconciliation
+    depends_on:
+      - postgres
+      - backend
