@@ -49,7 +49,19 @@ jobs:
         uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
-          cache: true
+
+      - name: Locate pnpm store
+        if: matrix.ecosystem == 'pnpm'
+        run: echo "PNPM_STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+
+      - name: Restore pnpm store cache
+        if: matrix.ecosystem == 'pnpm'
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.PNPM_STORE_PATH }}
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-pnpm-${{ hashFiles('pnpm-workspace.yaml', 'apps/*/package.json', 'services/*/package.json', 'packages/*/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ env.NODE_VERSION }}-pnpm-
 
       - name: Audit npm workspaces
         if: matrix.ecosystem == 'npm'
