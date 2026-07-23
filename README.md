@@ -1,30 +1,13 @@
-# Customer Portal API
+# customer-portal-api
 
-A reviewable TypeScript monorepo for a customer self-service platform. Two Next.js frontends use an Express API backed by PostgreSQL; asynchronous jobs are processed by a BullMQ worker over Redis. Shared contracts and utility packages keep service boundaries consistent.
+customer-portal-api is a customer account and billing portal. The repository contains the portal UI, REST API, payment reconciliation worker, shared TypeScript contracts, a scheduled maintenance job, and the PostgreSQL schema used by the application.
 
-## Prerequisites
+## Architecture
 
-- Node.js 22
-- pnpm 9 (`corepack enable`)
-- Docker with Compose
+The React frontend calls the backend REST API for customer and payment data. The Express backend reads and writes PostgreSQL through the schema managed in db/migrations. A Python worker continuously consumes the payment-reconciliation queue, reconciles pending payment retries, and writes its results back through the same PostgreSQL schema. The standalone jobs/cleanup-expired-sessions.py script runs on a schedule against that database to purge expired sessions. The shared workspace holds Customer and Payment TypeScript types imported by both the frontend and backend.
 
-## Start locally
+The local docker-compose.yml starts frontend, backend, worker, and PostgreSQL together. Database connection settings and the payment queue name are supplied through environment variables.
 
-```bash
-cp .env.example .env
-docker compose -f infrastructure/docker/docker-compose.yml up -d
-pnpm install
-pnpm dev
-```
+## Local development
 
-Customer UI: `http://localhost:3000`; admin UI: `http://localhost:3001`; API: `http://localhost:4000`.
-
-## Commands
-
-`pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:integration`, `pnpm test:e2e`, and `pnpm build` run through Turborepo. The modernization workflow combines per-package coverage and enforces an 80% global target; the baseline assessment in `docs/devops-modernization-blueprint.md` records the intentional starting gaps.
-
-## Delivery model
-
-`main` is the protected release branch. Daily work lands through `develop`; feature branches merge to `develop` and validated release changes are promoted to `main`. Emergency `hotfix/*` branches start from `main` and must merge back to both release lines.
-
-See [the modernization blueprint](docs/devops-modernization-blueprint.md), [branch review](docs/branch-review.md), and [publication runbook](docs/publication-runbook.md).
+Start PostgreSQL and the application processes with Docker Compose, or install the root npm workspaces and run the frontend and backend scripts separately. The Python worker dependencies are listed in worker/requirements.txt. Apply the SQL files in db/migrations in numeric order before exercising the API or worker.
