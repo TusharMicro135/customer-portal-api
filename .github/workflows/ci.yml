@@ -102,13 +102,23 @@ jobs:
         uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
-          cache: true
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
+
+      - name: Locate pnpm store
+        run: echo "PNPM_STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+
+      - name: Restore pnpm store cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.PNPM_STORE_PATH }}
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-pnpm-${{ hashFiles('pnpm-workspace.yaml', 'apps/*/package.json', 'services/*/package.json', 'packages/*/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ env.NODE_VERSION }}-pnpm-
 
       - name: Install pnpm workspace dependencies
         run: pnpm install --no-frozen-lockfile
@@ -216,13 +226,23 @@ jobs:
         uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
-          cache: true
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
+
+      - name: Locate pnpm store
+        run: echo "PNPM_STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+
+      - name: Restore pnpm store cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.PNPM_STORE_PATH }}
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-pnpm-${{ hashFiles('pnpm-workspace.yaml', 'apps/*/package.json', 'services/*/package.json', 'packages/*/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ env.NODE_VERSION }}-pnpm-
 
       - name: Restore npm download cache
         uses: actions/cache@v5
