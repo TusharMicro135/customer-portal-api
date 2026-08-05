@@ -10,7 +10,7 @@ The old workflow ran only on pushes to `main`, used `npm install` without a lock
 
 The core CI workflow runs quality checks, five Node test suites, the Python worker tests, and the application build in parallel. Every test suite has a 60% coverage floor. pnpm and pip caches are keyed from committed dependency files, Python code is linted, and third-party GitHub Actions are pinned to reviewed commit SHAs. The build runs once and publishes one artifact for downstream consumers; the artifact validation job downloads that output rather than rebuilding it.
 
-On a warm cache, the comparable lint/test feedback lane should land around 45â€“60 seconds. Earlier complete runs of the broader, fully validated workflow landed between 88 and 109 seconds, so budget roughly 90â€“120 seconds for the full CI gate. Security runs in parallel and adds dependency audits, PR dependency review, secret scanning, and CodeQL for GitHub Actions, JavaScript/TypeScript, and Python. The wider gate is not directly comparable with the old two-job workflow because it covers substantially more code.
+On a warm cache, the comparable lint/test feedback lane should land around 45–60 seconds. Earlier complete runs of the broader workflow landed between 88 and 109 seconds; the current pull request passed CI in 91 seconds and Security in 98 seconds. Budget roughly 90–120 seconds for the full CI gate until more runs establish a reliable median. Security runs in parallel and adds dependency audits, PR dependency review, secret scanning, and CodeQL for GitHub Actions, JavaScript/TypeScript, and Python. The wider gate is not directly comparable with the old two-job workflow because it covers substantially more code.
 
 ## Branch protection recommendations
 
