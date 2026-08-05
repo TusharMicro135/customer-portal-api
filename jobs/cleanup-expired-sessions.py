@@ -5,19 +5,19 @@ import psycopg2
 
 def cleanup_expired_sessions():
     connection = psycopg2.connect(
-        host=os.environ.get("PGHOST", "localhost"),
-        port=os.environ.get("PGPORT", "5432"),
-        dbname=os.environ.get("PGDATABASE", "customer_portal"),
-        user=os.environ.get("PGUSER", "portal"),
-        password=os.environ.get("PGPASSWORD", "dummy-local-password"),
+        host=os.getenv('PGHOST', 'localhost'),
+        port=os.getenv('PGPORT', '5432'),
+        dbname=os.getenv('PGDATABASE', 'customer_portal'),
+        user=os.getenv('PGUSER', 'portal'),
+        password=os.getenv('PGPASSWORD', 'dummy-local-password'),
     )
     try:
-        with connection:
-            with connection.cursor() as cursor:
-                cursor.execute("DELETE FROM sessions WHERE expires_at < NOW()")
+        with connection.cursor() as cursor:
+            cursor.execute('DELETE FROM sessions WHERE expires_at < NOW()')
+        connection.commit()
     finally:
         connection.close()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     cleanup_expired_sessions()
