@@ -1,6 +1,55 @@
 services:
+  frontend:
+    image: node:20-alpine
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    command: sh -c "npm install && npm --workspace frontend run dev -- --host 0.0.0.0"
+    environment:
+      VITE_API_BASE_URL: http://localhost:3000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+  backend:
+    image: node:20-alpine
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    command: sh -c "npm install && npm --workspace backend run build && npm --workspace backend start"
+    environment:
+      PORT: "3000"
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: customer_portal
+      PGUSER: portal
+      PGPASSWORD: dummy-local-password
+      QUEUE_NAME: payment-reconciliation
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+
+  worker:
+    image: python:3.12-slim
+    working_dir: /workspace/worker
+    volumes:
+      - .:/workspace
+    command: sh -c "pip install -r requirements.txt && python worker.py"
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: customer_portal
+      PGUSER: portal
+      PGPASSWORD: dummy-local-password
+      QUEUE_NAME: payment-reconciliation
+    depends_on:
+      - postgres
+      - backend
+
   postgres:
-    image: postgres:16
+    image: postgres:16-alpine
     environment:
       POSTGRES_DB: customer_portal
       POSTGRES_USER: portal
@@ -9,52 +58,3 @@ services:
       - "5432:5432"
     volumes:
       - ./db/migrations:/docker-entrypoint-initdb.d:ro
-
-  backend:
-    image: node:20
-    working_dir: /workspace
-    command: sh -c "npm install && npm run build --workspace backend && npm start --workspace backend"
-    volumes:
-      - .:/workspace
-    environment:
-      PGHOST: postgres
-      PGPORT: "5432"
-      PGDATABASE: customer_portal
-      PGUSER: portal
-      PGPASSWORD: dummy-local-password
-      PAYMENT_QUEUE: payment-reconciliation
-      PORT: "4000"
-    depends_on:
-      - postgres
-    ports:
-      - "4000:4000"
-
-  frontend:
-    image: node:20
-    working_dir: /workspace
-    command: sh -c "npm install && npm run dev --workspace frontend -- --host 0.0.0.0"
-    volumes:
-      - .:/workspace
-    environment:
-      VITE_API_BASE_URL: http://localhost:4000
-    depends_on:
-      - backend
-    ports:
-      - "5173:5173"
-
-  worker:
-    image: python:3.11
-    working_dir: /workspace/worker
-    command: sh -c "pip install -r requirements.txt && python worker.py"
-    volumes:
-      - .:/workspace
-    environment:
-      PGHOST: postgres
-      PGPORT: "5432"
-      PGDATABASE: customer_portal
-      PGUSER: portal
-      PGPASSWORD: dummy-local-password
-      PAYMENT_QUEUE: payment-reconciliation
-    depends_on:
-      - postgres
-      - backend
