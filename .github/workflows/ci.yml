@@ -155,24 +155,12 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  artifact-consumer:
-    name: Validate reusable build artifact
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: application-build
-          path: build-artifacts
-      - name: Confirm packaged output is reusable
-        run: test -n "$(find build-artifacts -type f -print -quit)"
-
   ci-gate:
     name: CI gate
     if: always()
-    needs: [quality, node-tests, python-tests, build, artifact-consumer]
+    needs: [quality, node-tests, python-tests, build]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Require every validation job
         env:
@@ -180,8 +168,13 @@ jobs:
           NODE_TESTS: ${{ needs.node-tests.result }}
           PYTHON_TESTS: ${{ needs.python-tests.result }}
           BUILD: ${{ needs.build.result }}
-          ARTIFACT: ${{ needs.artifact-consumer.result }}
         run: |
-          for result in "$QUALITY" "$NODE_TESTS" "$PYTHON_TESTS" "$BUILD" "$ARTIFACT"; do
+          for result in "$QUALITY" "$NODE_TESTS" "$PYTHON_TESTS" "$BUILD"; do
             test "$result" = success
           done
+      - uses: actions/download-artifact@v4
+        with:
+          name: application-build
+          path: build-artifacts
+      - name: Confirm packaged output is reusable
+        run: test -n "$(find build-artifacts -type f -print -quit)"
