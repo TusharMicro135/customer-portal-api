@@ -1,5 +1,5 @@
 from reconcile import reconcile_payments
 
 
-def test_reconcile_smoke():
+def test_reconciliation_job_is_callable():
     assert callable(reconcile_payments)
