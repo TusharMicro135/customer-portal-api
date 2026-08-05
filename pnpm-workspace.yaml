@@ -6,6 +6,9 @@ packages:
   - "backend"
   - "shared"
 
+overrides:
+  postcss: ^8.5.12
+
 onlyBuiltDependencies:
   - esbuild
   - msgpackr-extract
