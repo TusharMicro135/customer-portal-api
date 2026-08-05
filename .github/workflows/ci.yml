@@ -141,6 +141,7 @@ jobs:
           key: next-build-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
           restore-keys: |
             next-build-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            next-build-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - name: Package build output
