@@ -2,13 +2,26 @@
   "name": "customer-portal-api",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@10.15.0",
+  "engines": {
+    "node": ">=20"
+  },
   "workspaces": [
     "frontend",
     "backend",
     "shared"
   ],
   "scripts": {
-    "lint": "npm run lint --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "build": "pnpm -r --workspace-concurrency=4 --if-present build",
+    "lint": "pnpm -r --workspace-concurrency=4 --if-present lint",
+    "typecheck": "pnpm --filter @portal/shared-types build && pnpm --filter @portal/shared-utils build && pnpm -r --workspace-concurrency=4 --if-present typecheck",
+    "test": "pnpm -r --workspace-concurrency=4 --if-present test",
+    "test:coverage": "pnpm -r --workspace-concurrency=4 --if-present test:coverage"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.30.1",
+    "eslint": "^9.30.1",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.35.1"
   }
 }

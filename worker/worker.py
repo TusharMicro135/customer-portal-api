@@ -2,9 +2,7 @@ import os
 import time
 
 import schedule
-
 from reconcile import reconcile_payments
-
 
 QUEUE_NAME = os.getenv('QUEUE_NAME', 'payment-reconciliation')
 
