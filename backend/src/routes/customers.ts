@@ -1,24 +1,26 @@
-import { Request, Response, Router } from "express";
-import type { Customer } from "@customer-portal/shared";
-import { pool } from "../db/pool";
+import { Router, type Request, type Response } from 'express';
+import type { Customer } from '@customer-portal/shared';
+import { pool } from '../db/pool';
 
-export async function listCustomers(_req: Request, res: Response) {
+export const router = Router();
+
+export async function getCustomers(_request: Request, response: Response): Promise<void> {
   const result = await pool.query<Customer>(
-    "SELECT id, name, email, payment_status AS \"paymentStatus\" FROM customers ORDER BY id"
+    'SELECT id, name, email, payment_status AS "paymentStatus" FROM customers ORDER BY id',
   );
-  res.json(result.rows);
+  response.json(result.rows);
 }
 
-export async function createCustomer(req: Request, res: Response) {
-  const { name, email } = req.body as Pick<Customer, "name" | "email">;
+export async function createCustomer(request: Request, response: Response): Promise<void> {
+  const { name, email } = request.body as Pick<Customer, 'name' | 'email'>;
   const result = await pool.query<Customer>(
-    "INSERT INTO customers (name, email, payment_status) VALUES ($1, $2, 'pending') RETURNING id, name, email, payment_status AS \"paymentStatus\"",
-    [name, email]
+    'INSERT INTO customers (name, email) VALUES ($1, $2) RETURNING id, name, email, payment_status AS "paymentStatus"',
+    [name, email],
   );
-  res.status(201).json(result.rows[0]);
+  response.status(201).json(result.rows[0]);
 }
 
-const router = Router();
-router.get("/", listCustomers);
-router.post("/", createCustomer);
+router.get('/', getCustomers);
+router.post('/', createCustomer);
+
 export default router;
