@@ -1,27 +1,187 @@
 name: CI
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  lint-and-install:
+  quality:
+    name: Quality (Node)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          node-version: '20'
-      - run: npm install
-      - run: npm run lint --workspaces --if-present
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run lint
 
-  test:
+  node-tests:
+    name: Tests and coverage (Node)
     runs-on: ubuntu-latest
-    needs: lint-and-install
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          node-version: '20'
-      - run: npm install
-      - run: npm test --workspaces --if-present
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - name: Run tests and enforce 60% coverage
+        run: npm run test:coverage
+      - name: Upload Node coverage reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: node-coverage
+          path: |
+            frontend/coverage/
+            backend/coverage/
+          if-no-files-found: warn
+          retention-days: 7
+
+  python-tests:
+    name: Quality, tests and coverage (Python)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            worker/requirements.txt
+            worker/requirements-dev.txt
+      - run: python -m pip install -r worker/requirements-dev.txt
+      - run: python -m ruff check worker jobs
+      - name: Run worker tests and enforce 60% coverage
+        working-directory: worker
+        run: python -m pytest tests --cov=. --cov-report=term-missing --cov-report=xml:coverage.xml --cov-fail-under=60
+      - name: Upload Python coverage report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: python-coverage
+          path: worker/coverage.xml
+          if-no-files-found: warn
+          retention-days: 7
+
+  build:
+    name: Build once
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Package immutable build output
+        run: tar -czf build-output.tgz frontend/dist backend/dist
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: build-output
+          path: build-output.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  artifact-smoke:
+    name: Validate reusable artifact
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: build-output
+      - name: Check the build handoff without rebuilding
+        run: |
+          test -s build-output.tgz
+          tar -tzf build-output.tgz | grep -q '^frontend/dist/index.html$'
+          tar -tzf build-output.tgz | grep -q '^backend/dist/server.js$'
+
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Audit npm lockfile
+        run: npm audit --package-lock-only --audit-level=high
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: worker/requirements-dev.txt
+      - run: python -m pip install pip-audit==2.10.1
+      - name: Audit Python runtime dependencies
+        run: python -m pip_audit -r worker/requirements.txt
+
+  dependency-review:
+    name: Dependency review (PR)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: moderate
+
+  merge-gate:
+    name: CI merge gate
+    if: always()
+    needs: [quality, node-tests, python-tests, build, artifact-smoke, dependency-audit, dependency-review]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every applicable job to pass
+        env:
+          QUALITY: ${{ needs.quality.result }}
+          NODE_TESTS: ${{ needs.node-tests.result }}
+          PYTHON_TESTS: ${{ needs.python-tests.result }}
+          BUILD: ${{ needs.build.result }}
+          ARTIFACT: ${{ needs.artifact-smoke.result }}
+          AUDIT: ${{ needs.dependency-audit.result }}
+          REVIEW: ${{ needs.dependency-review.result }}
+        run: |
+          for result in "$QUALITY" "$NODE_TESTS" "$PYTHON_TESTS" "$BUILD" "$ARTIFACT" "$AUDIT"; do
+            test "$result" = success || { echo "A required CI job was $result"; exit 1; }
+          done
+          test "$REVIEW" = success || test "$REVIEW" = skipped || { echo "Dependency review was $REVIEW"; exit 1; }
+
