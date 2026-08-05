@@ -1,3 +1,4 @@
+import os
 import time
 
 import schedule
@@ -5,13 +6,16 @@ import schedule
 from reconcile import reconcile_payments
 
 
-def consume_payment_queue():
-    reconcile_payments()
+QUEUE_NAME = os.getenv('QUEUE_NAME', 'payment-reconciliation')
 
 
-schedule.every(30).seconds.do(consume_payment_queue)
-
-if __name__ == "__main__":
+def run_worker():
+    print(f'Consuming {QUEUE_NAME} reconciliation queue')
+    schedule.every(30).seconds.do(reconcile_payments)
     while True:
         schedule.run_pending()
         time.sleep(1)
+
+
+if __name__ == '__main__':
+    run_worker()
