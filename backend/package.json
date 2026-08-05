@@ -10,7 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@customer-portal/shared": "*",
+    "@customer-portal/shared": "workspace:*",
     "express": "^4.21.2",
     "pg": "^8.13.1"
   },

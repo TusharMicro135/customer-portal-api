@@ -2,6 +2,11 @@ node_modules
 .next
 dist
 coverage
+coverage.xml
+.coverage
+.codex-tmp-python
+__pycache__
+*.py[cod]
 playwright-report
 test-results
 .turbo
