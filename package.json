@@ -1,7 +1,12 @@
 {
   "name": "customer-portal-api",
+  "version": "1.0.0",
   "private": true,
-  "workspaces": ["frontend", "backend", "shared"],
+  "workspaces": [
+    "frontend",
+    "backend",
+    "shared"
+  ],
   "scripts": {
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
