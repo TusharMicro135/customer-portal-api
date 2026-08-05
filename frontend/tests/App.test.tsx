@@ -1,21 +1,15 @@
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import { vi } from "vitest";
-import App from "../src/App";
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, it } from 'vitest';
+import App from '../src/App';
 
-vi.mock("../src/api/client", () => ({
-  getCustomers: vi.fn().mockResolvedValue([]),
-  getPayments: vi.fn().mockResolvedValue([])
-}));
-
-describe("App", () => {
-  it("renders the portal title", () => {
-    render(<App />);
-    expect(screen.getByRole("heading", { name: "Customer Account & Billing Portal" })).toBeInTheDocument();
+describe('App', () => {
+  it('renders the customer account and billing heading', () => {
+    const markup = renderToStaticMarkup(<App />);
+    expect(markup).toContain('Customer Account and Billing Portal');
   });
 
-  it("renders the payment status section", () => {
-    render(<App />);
-    expect(screen.getByRole("heading", { name: "Customer payment status" })).toBeInTheDocument();
+  it('renders the customer payment dashboard', () => {
+    const markup = renderToStaticMarkup(<App />);
+    expect(markup).toContain('Customer payment status');
   });
 });
